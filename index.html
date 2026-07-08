@@ -11,7 +11,21 @@
     margin-top:60px;
   }
   h1{color:#333;font-size:28px;}
-  p{color:#666;}
+  .sub{color:#666;margin-bottom:10px;}
+  .difficulty button{
+    padding:6px 14px;
+    margin:4px;
+    border:1px solid #bbb;
+    border-radius:6px;
+    background:#eef2f7;
+    cursor:pointer;
+    font-size:15px;
+  }
+  .difficulty button.active{
+    background:#4a90d9;
+    color:#fff;
+    border-color:#357abd;
+  }
   input{
     padding:10px;
     font-size:18px;
@@ -20,7 +34,7 @@
     border:1px solid #ccc;
     border-radius:6px;
   }
-  button{
+  button.guess{
     padding:10px 24px;
     font-size:18px;
     cursor:pointer;
@@ -30,7 +44,7 @@
     border-radius:6px;
     margin-left:8px;
   }
-  button:hover{background:#357abd;}
+  button.guess:hover{background:#357abd;}
   #msg{margin-top:24px;font-size:20px;color:#444;min-height:30px;}
   .footer{margin-top:60px;font-size:12px;color:#999;}
 </style>
@@ -38,38 +52,80 @@
 <body>
 
 <h1>🎮 猜数字游戏 v0.0.2</h1>
-<p>我已随机一个 <b>1 ～ 100</b> 的数，你来猜！</p>
+<div class="sub" id="rangeText">我已随机一个 1～100 的数，你来猜！</div>
+
+<!-- 难度选择 -->
+<div class="difficulty">
+  <button onclick="setLevel(1)">难度1（1~10）</button>
+  <button onclick="setLevel(2)">难度2（10~25）</button>
+  <button onclick="setLevel(3)">难度3（25~45）</button>
+  <button onclick="setLevel(4)">难度4（45~70）</button>
+  <button onclick="setLevel(5)">难度5（70~100）</button>
+</div>
 
 <input type="number" id="guess" placeholder="输入数字">
-<button onclick="check()">猜！</button>
+<button class="guess" onclick="check()">猜！</button>
 
 <div id="msg"></div>
 
 <p class="footer">此程序由 1709174036@qq.com 提供</p>
 
 <script>
-const answer = Math.floor(Math.random()*100)+1;
+const levels = {
+  1:{min:1,max:10},
+  2:{min:10,max:25},
+  3:{min:25,max:45},
+  4:{min:45,max:70},
+  5:{min:70,max:100}
+};
+
+let cur = 5;
+let answer = 0;
 let count = 0;
 
-function check(){
-  const g = Number(document.getElementById("guess").value);
-  const msg = document.getElementById("msg");
+function setLevel(lv){
+  cur = lv;
+  restart();
+  document.querySelectorAll('.difficulty button').forEach(b=>{
+    b.classList.toggle('active', Number(b.textContent.charAt(2))===lv);
+  });
+}
 
-  if(!g || g < 1 || g > 100){
-    msg.innerText = "⚠️ 请输入 1～100 的数字！";
+function restart(){
+  const l = levels[cur];
+  answer = Math.floor(Math.random()*(l.max-l.min+1))+l.min;
+  count = 0;
+  document.getElementById('rangeText').innerText =
+    `我已随机一个 ${l.min}～${l.max} 的数，你来猜！`;
+  document.getElementById('msg').innerText = '';
+  document.getElementById('guess').value = '';
+  document.getElementById('guess').min = l.min;
+  document.getElementById('guess').max = l.max;
+}
+
+function check(){
+  const g = Number(document.getElementById('guess').value);
+  const l = levels[cur];
+  const msg = document.getElementById('msg');
+
+  if(!g || g<l.min || g>l.max){
+    msg.innerText = `⚠️ 请输入 ${l.min}～${l.max} 的数字哦～`;
     return;
   }
 
   count++;
-
-  if(g === answer){
-    msg.innerText = "🎉 猜对啦！答案是 " + answer + "，你一共猜了 " + count + " 次～";
-  } else if(g < answer){
-    msg.innerText = "📉 太小了，再试试！";
-  } else {
-    msg.innerText = "📈 太大了，再试试！";
+  if(g===answer){
+    msg.innerText = `🎉 猜对啦！答案是 ${answer}，你一共猜了 ${count} 次～`;
+  }else if(g<answer){
+    msg.innerText = "📉 唔…有点小哦～";
+  }else{
+    msg.innerText = "📈 诶嘿…有点大哦～";
   }
 }
+
+// 初始默认难度5
+restart();
+setLevel(5);
 </script>
 
 </body>

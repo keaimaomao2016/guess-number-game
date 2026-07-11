@@ -2,7 +2,7 @@
 <html lang="zh-CN" id="htmlRoot">
 <head>
 <meta charset="UTF-8">
-<title>猜数字游戏 v0.0.5</title>
+<title>猜数字游戏 v0.0.6</title>
 <style>
   :root {
     --bg: #f8f9fa;
@@ -50,7 +50,6 @@
     border: 1px solid #ccc;
     border-radius: 6px;
   }
-
   button.guess-btn {
     padding: 10px 24px;
     font-size: 18px;
@@ -96,9 +95,10 @@
     padding: 30px 40px;
     text-align: center;
     box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-    max-width: 420px;
+    max-width: 440px;
   }
-  .settings-content h2 { margin-top: 0; }
+  .settings-content h2 { margin-top: 0; color: var(--text); }
+
   .skin-list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
   .skin-item {
     display: flex; align-items: center; gap: 12px;
@@ -119,10 +119,26 @@
   .skin-name { font-size: 15px; font-weight: bold; }
   .skin-desc { font-size: 12px; color: #888; }
 
-  .custom-upload { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
-  .custom-upload input[type="file"] { display: none; }
-  .upload-btn {
-    padding: 8px 16px;
+  /* 自定义输入区 */
+  .custom-url {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ccc;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+  .custom-url input {
+    padding: 8px;
+    font-size: 14px;
+    width: 280px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    text-align: center;
+  }
+  .custom-url button {
+    padding: 6px 18px;
     font-size: 14px;
     background: #4a90d9;
     color: #fff;
@@ -130,7 +146,8 @@
     border-radius: 6px;
     cursor: pointer;
   }
-  .upload-btn:hover { background: #357abd; }
+  .custom-url button:hover { background: #357abd; }
+  .custom-tip { font-size: 11px; color: #999; }
 
   .close-btn {
     margin-top: 20px;
@@ -192,7 +209,7 @@
 </head>
 <body class="skin-default" id="bodyEl">
 
-<h1>🎮 猜数字游戏 v0.0.5</h1>
+<h1>🎮 猜数字游戏 v0.0.6</h1>
 <div class="sub" id="rangeText">我已随机一个 10～100 的数，你来猜！</div>
 
 <!-- 难度选择 -->
@@ -205,10 +222,12 @@
   <button onclick="setCustom()" id="btnCustom">自定义</button>
 </div>
 
-<!-- 自定义输入区 -->
+<!-- 自定义输入区（最小值 & 最大值都可改） -->
 <div class="custom-box" id="customBox" style="margin:10px 0; display:none;">
-  <span>最小值：10</span>
-  <input type="number" id="customMax" placeholder="最大值" min="11" value="100" style="padding:8px;font-size:16px;width:100px;text-align:center;border:1px solid #ccc;border-radius:6px;margin:0 4px;">
+  <span>最小值：</span>
+  <input type="number" id="customMin" placeholder="最小值" value="10" style="padding:8px;font-size:16px;width:90px;text-align:center;border:1px solid #ccc;border-radius:6px;margin:0 4px;">
+  <span>最大值：</span>
+  <input type="number" id="customMax" placeholder="最大值" value="100" style="padding:8px;font-size:16px;width:90px;text-align:center;border:1px solid #ccc;border-radius:6px;margin:0 4px;">
   <button onclick="applyCustom()" style="padding:8px 16px;font-size:16px;background:#4a90d9;color:#fff;border:none;border-radius:6px;cursor:pointer;">确定</button>
 </div>
 
@@ -259,14 +278,14 @@
         <div class="skin-preview" style="background:#f5f5f5; display:flex; align-items:center; justify-content:center; font-size:20px;">🖼️</div>
         <div>
           <div class="skin-name">🖼️ 自定义图片</div>
-          <div class="skin-desc">从电脑选择一张图片作为背景</div>
+          <div class="skin-desc">输入图片网址，自定义背景</div>
         </div>
       </div>
-      <!-- 上传控件 -->
-      <div class="custom-upload">
-        <input type="file" id="bgUpload" accept="image/*">
-        <button class="upload-btn" onclick="document.getElementById('bgUpload').click()">选择图片</button>
-        <div style="font-size:12px;color:#888;margin-top:6px;">仅当前页面有效，刷新后恢复</div>
+      <!-- 自定义URL输入 -->
+      <div class="custom-url" id="customUrlInput">
+        <input type="text" id="bgUrl" placeholder="粘贴图片网址（以 .jpg/.png 结尾）">
+        <button onclick="applyCustomBg()">应用</button>
+        <div class="custom-tip">提示：右键网上图片 → 复制图片地址 → 粘贴到这里</div>
       </div>
     </div>
     <br>
@@ -292,6 +311,7 @@ let count = 0;
 function setLevel(lv){
   cur = lv;
   document.getElementById('customBox').style.display = 'none';
+  document.getElementById('customUrlInput').style.display = 'none';
   restartLevel(levels[lv]);
   highlight(lv);
   closeSettings();
@@ -300,18 +320,26 @@ function setLevel(lv){
 function setCustom(){
   cur = 'custom';
   document.getElementById('customBox').style.display = 'block';
-  restartLevel({min:customMin, max:customMax});
+  document.getElementById('customUrlInput').style.display = 'none';
   highlight('custom');
 }
 
 function applyCustom(){
+  const minVal = Number(document.getElementById('customMin').value);
   const maxVal = Number(document.getElementById('customMax').value);
-  if(!maxVal || maxVal <= customMin){
-    alert('最大值必须大于 ' + customMin + '！');
+
+  if(!minVal || !maxVal){
+    alert('请输入最小值和最大值！');
     return;
   }
+  if(minVal >= maxVal){
+    alert('最小值必须小于最大值！');
+    return;
+  }
+
+  customMin = minVal;
   customMax = maxVal;
-  restartLevel({min:customMin, max:customMax});
+  restartLevel({min: customMin, max: customMax});
   closeSettings();
 }
 
@@ -365,26 +393,26 @@ function changeSkin(skinName, el){
   el.classList.add('active');
   document.body.className = '';
   document.body.classList.add('skin-' + skinName);
+  document.getElementById('customUrlInput').style.display = skinName==='custom' ? 'flex' : 'none';
   if(skinName !== 'custom'){
     document.body.style.backgroundImage = '';
   }
   closeSettings();
 }
 
-// ====== 自定义图片上传 ======
-document.getElementById('bgUpload').addEventListener('change', function(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    document.body.classList.remove('skin-default','skin-pink','skin-blue');
-    document.body.classList.add('skin-custom');
-    document.body.style.backgroundImage = `url(${ev.target.result})`;
-    document.querySelectorAll('.skin-item').forEach(i=>i.classList.remove('active'));
-    document.querySelector('.skin-item:nth-child(4)').classList.add('active');
-  };
-  reader.readAsDataURL(file);
-});
+function applyCustomBg(){
+  const url = document.getElementById('bgUrl').value.trim();
+  if(!url){
+    alert('请先粘贴图片网址！');
+    return;
+  }
+  document.body.classList.remove('skin-default','skin-pink','skin-blue');
+  document.body.classList.add('skin-custom');
+  document.body.style.backgroundImage = `url(${url})`;
+  document.querySelectorAll('.skin-item').forEach(o=>o.classList.remove('active'));
+  document.querySelector('.skin-item:nth-child(4)').classList.add('active');
+  closeSettings();
+}
 
 // 默认初始化
 restartLevel({min:customMin, max:customMax});
